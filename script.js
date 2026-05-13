@@ -32,7 +32,7 @@ async function processPDF() {
   let fullText = "";
 
   const maxPages =
-    Math.min(pdf.numPages, 3);
+    Math.min(pdf.numPages, 5);
 
   for (
     let pageNum = 1;
@@ -71,10 +71,7 @@ async function processPDF() {
     const result =
       await Tesseract.recognize(
         canvas,
-        'eng',
-        {
-          logger: m => console.log(m)
-        }
+        'eng'
       );
 
     fullText +=
@@ -98,9 +95,6 @@ function extractTransactions(text) {
 
   extractedTransactions = [];
 
-  const lines =
-    text.split('\n');
-
   const tbody =
     document.querySelector(
       '#resultsTable tbody'
@@ -108,67 +102,90 @@ function extractTransactions(text) {
 
   tbody.innerHTML = "";
 
-  lines.forEach(line => {
+  const lines =
+    text
+      .split('\n')
+      .map(l => l.trim())
+      .filter(l => l.length > 0);
 
-    line = line.trim();
+  for (let i = 0; i < lines.length; i++) {
 
-    if (!line) return;
-
-    console.log(line);
+    const line =
+      lines[i];
 
     const amountMatch =
       line.match(
-        /-?\d[\d,]*\.\d{2}/
+        /([\d,]+\.\d{2})-?/
       );
 
-    if (!amountMatch)
-      return;
+    const balanceMatch =
+      line.match(
+        /(\d{1,3}(,\d{3})*\.\d{2})$/
+      );
 
     const dateMatch =
       line.match(
-        /(\d{2}[\/\-]\d{2}[\/\-]\d{2,4})|(\d{1,2}\s[A-Za-z]{3})|(\d{4}[\/\-]\d{2}[\/\-]\d{2})/
+        /0\d{3}/
       );
 
-    if (!dateMatch)
-      return;
+    if (
+      amountMatch &&
+      balanceMatch &&
+      dateMatch
+    ) {
 
-    const date =
-      dateMatch[0];
+      const amount =
+        amountMatch[1]
+          .replace(/,/g, '');
 
-    const amount =
-      amountMatch[0]
-        .replace(/,/g, '');
+      const dateCode =
+        dateMatch[0];
 
-    let description =
-      line
-        .replace(date, '')
-        .replace(amountMatch[0], '')
-        .trim();
+      let description = "";
 
-    if (description.length < 3)
-      return;
+      if (lines[i + 1]) {
 
-    const transaction = {
-      date,
-      description,
-      amount
-    };
+        description =
+          lines[i + 1];
 
-    extractedTransactions.push(
-      transaction
-    );
+        if (
+          lines[i + 2] &&
+          !lines[i + 2].match(/0\d{3}/)
+        ) {
 
-    const row =
-      document.createElement('tr');
+          description +=
+            " " + lines[i + 2];
+        }
+      }
 
-    row.innerHTML = `
-      <td>${date}</td>
-      <td>${description}</td>
-      <td>${amount}</td>
-    `;
+      description =
+        description
+          .replace(/\s+/g, ' ')
+          .trim();
 
-    tbody.appendChild(row);
-  });
+      const transaction = {
+
+        date: dateCode,
+        description,
+        amount
+      };
+
+      extractedTransactions.push(
+        transaction
+      );
+
+      const row =
+        document.createElement('tr');
+
+      row.innerHTML = `
+        <td>${dateCode}</td>
+        <td>${description}</td>
+        <td>${amount}</td>
+      `;
+
+      tbody.appendChild(row);
+    }
+  }
 }
 
 function downloadCSV() {
