@@ -6,16 +6,20 @@ async function processPDF() {
     document.getElementById('pdfUpload');
 
   if (!fileInput.files.length) {
+
     alert("Please upload a PDF");
+
     return;
   }
 
-  const file = fileInput.files[0];
+  const file =
+    fileInput.files[0];
 
   const status =
     document.getElementById('status');
 
-  status.innerHTML = "Loading PDF...";
+  status.innerHTML =
+    "Loading PDF...";
 
   const arrayBuffer =
     await file.arrayBuffer();
@@ -27,21 +31,24 @@ async function processPDF() {
 
   let fullText = "";
 
+  const maxPages =
+    Math.min(pdf.numPages, 3);
+
   for (
     let pageNum = 1;
-    pageNum <= pdf.numPages;
+    pageNum <= maxPages;
     pageNum++
   ) {
 
     status.innerHTML =
-      `Processing page ${pageNum} of ${pdf.numPages}...`;
+      `Processing page ${pageNum} of ${maxPages}...`;
 
     const page =
       await pdf.getPage(pageNum);
 
     const viewport =
       page.getViewport({
-        scale: 2
+        scale: 3
       });
 
     const canvas =
@@ -64,14 +71,19 @@ async function processPDF() {
     const result =
       await Tesseract.recognize(
         canvas,
-        'eng'
+        'eng',
+        {
+          logger: m => console.log(m)
+        }
       );
 
     fullText +=
       result.data.text + "\n";
   }
 
-  console.log(fullText);
+  document.getElementById(
+    'ocrOutput'
+  ).value = fullText;
 
   status.innerHTML =
     "Extracting transactions...";
@@ -102,63 +114,69 @@ function extractTransactions(text) {
 
     if (!line) return;
 
-    const dateMatch =
-      line.match(
-        /(\d{2}[\/\-]\d{2}[\/\-]\d{2,4})|(\d{1,2}\s[A-Za-z]{3})/
-      );
+    console.log(line);
 
     const amountMatch =
       line.match(
-        /-?\d{1,3}(,\d{3})*(\.\d{2})/
+        /-?\d[\d,]*\.\d{2}/
       );
 
-    if (dateMatch && amountMatch) {
+    if (!amountMatch)
+      return;
 
-      const date =
-        dateMatch[0];
-
-      const amount =
-        amountMatch[0]
-          .replace(/,/g, '');
-
-      let description =
-        line
-          .replace(date, '')
-          .replace(amountMatch[0], '')
-          .trim();
-
-      if (
-        description.length < 2
-      ) return;
-
-      const transaction = {
-        date,
-        description,
-        amount
-      };
-
-      extractedTransactions.push(
-        transaction
+    const dateMatch =
+      line.match(
+        /(\d{2}[\/\-]\d{2}[\/\-]\d{2,4})|(\d{1,2}\s[A-Za-z]{3})|(\d{4}[\/\-]\d{2}[\/\-]\d{2})/
       );
 
-      const row =
-        document.createElement('tr');
+    if (!dateMatch)
+      return;
 
-      row.innerHTML = `
-        <td>${date}</td>
-        <td>${description}</td>
-        <td>${amount}</td>
-      `;
+    const date =
+      dateMatch[0];
 
-      tbody.appendChild(row);
-    }
+    const amount =
+      amountMatch[0]
+        .replace(/,/g, '');
+
+    let description =
+      line
+        .replace(date, '')
+        .replace(amountMatch[0], '')
+        .trim();
+
+    if (description.length < 3)
+      return;
+
+    const transaction = {
+      date,
+      description,
+      amount
+    };
+
+    extractedTransactions.push(
+      transaction
+    );
+
+    const row =
+      document.createElement('tr');
+
+    row.innerHTML = `
+      <td>${date}</td>
+      <td>${description}</td>
+      <td>${amount}</td>
+    `;
+
+    tbody.appendChild(row);
   });
 }
 
 function downloadCSV() {
 
   if (!extractedTransactions.length) {
+
     alert("No transactions found");
+
     return;
   }
 
@@ -174,7 +192,9 @@ function downloadCSV() {
   const blob =
     new Blob(
       [csv],
-      { type: 'text/csv' }
+      {
+        type: 'text/csv'
+      }
     );
 
   const link =
