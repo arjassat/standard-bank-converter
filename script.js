@@ -126,98 +126,106 @@ function extractTransactions(text) {
     const line =
       lines[i];
 
-    const amountMatch =
+    const transactionMatch =
       line.match(
-        /([\d,]+\.\d{2})-?/
+        /([\d,]+\.\d{2})(-?)\s+(\d{4})\s+([\d,]+\.\d{2})/
       );
 
-    const balanceMatch =
-      line.match(
-        /(\d{1,3}(,\d{3})*\.\d{2})$/
-      );
+    if (!transactionMatch)
+      continue;
 
-    const dateMatch =
-      line.match(
-        /\b(\d{4})\b/
-      );
+    let amount =
+      transactionMatch[1]
+        .replace(/,/g, '');
 
-    if (
-      amountMatch &&
-      balanceMatch &&
-      dateMatch
+    const isDebit =
+      transactionMatch[2] === "-";
+
+    const rawDate =
+      transactionMatch[3];
+
+    const month =
+      rawDate.substring(0, 2);
+
+    const day =
+      rawDate.substring(2, 4);
+
+    const formattedDate =
+      `${statementYear}-${month}-${day}`;
+
+    if (isDebit) {
+
+      amount =
+        "-" + amount;
+    }
+
+    let descriptionParts = [];
+
+    for (
+      let j = i + 1;
+      j < Math.min(i + 4, lines.length);
+      j++
     ) {
 
-      const amount =
-        amountMatch[1]
-          .replace(/,/g, '');
+      const nextLine =
+        lines[j];
 
-      const rawDate =
-        dateMatch[1];
+      if (
+        nextLine.match(
+          /([\d,]+\.\d{2})(-?)\s+(\d{4})/
+        )
+      ) {
 
-      const month =
-        rawDate.substring(0, 2);
-
-      const day =
-        rawDate.substring(2, 4);
-
-      const formattedDate =
-        `${statementYear}-${month}-${day}`;
-
-      let description = "";
-
-      if (lines[i + 1]) {
-
-        description =
-          lines[i + 1];
-
-        if (
-          lines[i + 2] &&
-          !lines[i + 2].match(/\b\d{4}\b/)
-        ) {
-
-          description +=
-            " " + lines[i + 2];
-        }
+        break;
       }
 
-      description =
-        description
-          .replace(/\s+/g, ' ')
-          .trim();
-
       if (
-        description.length < 3
-      ) continue;
+        nextLine.includes("Please verify") ||
+        nextLine.includes("www.standardbank") ||
+        nextLine.includes("BANK STATEMENT") ||
+        nextLine.includes("Customer Care") ||
+        nextLine.includes("Code of Banking Practice")
+      ) {
 
-      if (
-        description.includes("Please verify") ||
-        description.includes("www.standardbank") ||
-        description.includes("BANK STATEMENT") ||
-        description.includes("Customer Care")
-      ) continue;
+        continue;
+      }
 
-      const transaction = {
-
-        date: formattedDate,
-        description,
-        amount
-      };
-
-      extractedTransactions.push(
-        transaction
+      descriptionParts.push(
+        nextLine
       );
-
-      const row =
-        document.createElement('tr');
-
-      row.innerHTML = `
-        <td>${formattedDate}</td>
-        <td>${description}</td>
-        <td>${amount}</td>
-      `;
-
-      tbody.appendChild(row);
     }
+
+    const description =
+      descriptionParts
+        .join(" ")
+        .replace(/\s+/g, ' ')
+        .trim();
+
+    if (
+      description.length < 3
+    ) continue;
+
+    const transaction = {
+
+      date: formattedDate,
+      description,
+      amount
+    };
+
+    extractedTransactions.push(
+      transaction
+    );
+
+    const row =
+      document.createElement('tr');
+
+    row.innerHTML = `
+      <td>${formattedDate}</td>
+      <td>${description}</td>
+      <td>${amount}</td>
+    `;
+
+    tbody.appendChild(row);
   }
 }
 
