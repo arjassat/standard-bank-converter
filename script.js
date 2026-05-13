@@ -138,7 +138,7 @@ function extractTransactions(text) {
 
     const dateMatch =
       line.match(
-        /0(\d{3})/
+        /\b(\d{4})\b/
       );
 
     if (
@@ -172,7 +172,7 @@ function extractTransactions(text) {
 
         if (
           lines[i + 2] &&
-          !lines[i + 2].match(/0\d{3}/)
+          !lines[i + 2].match(/\b\d{4}\b/)
         ) {
 
           description +=
@@ -184,6 +184,17 @@ function extractTransactions(text) {
         description
           .replace(/\s+/g, ' ')
           .trim();
+
+      if (
+        description.length < 3
+      ) continue;
+
+      if (
+        description.includes("Please verify") ||
+        description.includes("www.standardbank") ||
+        description.includes("BANK STATEMENT") ||
+        description.includes("Customer Care")
+      ) continue;
 
       const transaction = {
 
