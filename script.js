@@ -108,6 +108,19 @@ function extractTransactions(text) {
       .map(l => l.trim())
       .filter(l => l.length > 0);
 
+  let statementYear = "2022";
+
+  const statementMatch =
+    text.match(
+      /Statement from .*? (\d{4})/i
+    );
+
+  if (statementMatch) {
+
+    statementYear =
+      statementMatch[1];
+  }
+
   for (let i = 0; i < lines.length; i++) {
 
     const line =
@@ -125,7 +138,7 @@ function extractTransactions(text) {
 
     const dateMatch =
       line.match(
-        /0\d{3}/
+        /0(\d{3})/
       );
 
     if (
@@ -138,8 +151,17 @@ function extractTransactions(text) {
         amountMatch[1]
           .replace(/,/g, '');
 
-      const dateCode =
-        dateMatch[0];
+      const rawDate =
+        dateMatch[1];
+
+      const month =
+        rawDate.substring(0, 2);
+
+      const day =
+        rawDate.substring(2, 4);
+
+      const formattedDate =
+        `${statementYear}-${month}-${day}`;
 
       let description = "";
 
@@ -165,7 +187,7 @@ function extractTransactions(text) {
 
       const transaction = {
 
-        date: dateCode,
+        date: formattedDate,
         description,
         amount
       };
@@ -178,7 +200,7 @@ function extractTransactions(text) {
         document.createElement('tr');
 
       row.innerHTML = `
-        <td>${dateCode}</td>
+        <td>${formattedDate}</td>
         <td>${description}</td>
         <td>${amount}</td>
       `;
