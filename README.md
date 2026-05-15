@@ -1,13 +1,9 @@
-# Bank Statement Converter
-
-Browser-based scanned bank statement OCR converter.
-
-Supports:
-- FNB
-- Nedbank
-- Standard Bank
-
-Built with:
-- PDF.js
-- Tesseract.js
-- JavaScript
+---
+title: Standard Bank CSV Converter
+emoji: 📄
+colorFrom: green
+colorTo: blue
+sdk: streamlit
+app_file: app.py
+pinned: false
+---
