@@ -5,6 +5,3 @@ pillow
 pytesseract
 opencv-python-headless
 numpy
-EasyOCR
-torch
-torchvision
